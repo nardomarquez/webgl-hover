@@ -1,5 +1,6 @@
 import "./style.css";
+import tick from "./webgl";
 
 window.addEventListener("load", () => {
-  console.log("Hello World!");
+  tick();
 });

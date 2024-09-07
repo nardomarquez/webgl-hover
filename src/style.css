@@ -14,3 +14,16 @@
   width: 50vw;
   height: auto;
 }
+
+#app {
+  opacity: 0;
+  pointer-events: none;
+}
+
+canvas {
+  display: block;
+  position: fixed;
+  z-index: -1;
+  left: 0;
+  top: 0;
+}
