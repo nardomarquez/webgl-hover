@@ -1,161 +1,138 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
-import vertexShader from "./shaders/vertex.glsl";
-import fragmentShader from "./shaders/fragment.glsl";
-import postVertexShader from "./post/vertex.glsl";
-import postFragmentShader from "./post/fragment.glsl";
+import PostProcessing from "./post";
+
+let cameraDistance = 10;
 
 export default class Scene {
+  canvas: HTMLCanvasElement;
+  images: HTMLImageElement[] = [];
+  imageData: {
+    image: HTMLImageElement;
+    mesh: THREE.Mesh;
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  }[] = [];
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
-  time: number;
-  speed: number;
-  targetSpeed: number;
-  mouse: THREE.Vector2;
-  followMouse: THREE.Vector2;
-  prevMouse: THREE.Vector2;
+  postProcessing: PostProcessing;
+
+  scroll: number;
   width: number;
   height: number;
-  cameraDistance: number;
-  customPass: ShaderPass;
-  composer: EffectComposer;
-  renderPass: RenderPass;
 
   constructor() {
+    // init
+    this.scroll = 0;
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+
     // Scene
     this.scene = new THREE.Scene();
 
     // Renderer
+    this.canvas = document.querySelector("canvas.webgl") as HTMLCanvasElement;
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
+      canvas: this.canvas,
     });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(this.renderer.domElement);
+    this.renderer.setSize(this.width, this.height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     // Camera
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
-    this.cameraDistance = 1000;
-    this.camera.position.z = this.cameraDistance;
-    this.camera.lookAt(0, 0, 0);
+    this.camera = new THREE.PerspectiveCamera(70, this.width / this.height, 0.1, 100);
+    this.camera.fov = 2 * Math.atan(this.height / 2 / cameraDistance) * (180 / Math.PI);
+    this.camera.position.set(0, 0, cameraDistance);
 
-    // mouse params
-    this.time = 0;
-    this.speed = 0;
-    this.targetSpeed = 0;
-    this.mouse = new THREE.Vector2();
-    this.followMouse = new THREE.Vector2();
-    this.prevMouse = new THREE.Vector2();
+    // create images
+    this.images = [...document.querySelectorAll("img")];
+    this.createImages();
 
-    this.addEventListeners();
-    this.composerPass();
+    // Post Processing
+    this.postProcessing = new PostProcessing({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      sizes: { width: this.width, height: this.height },
+    });
+
+    // methods
+    this.onResize();
     this.render();
+
+    window.addEventListener("resize", this.onResize.bind(this));
   }
 
-  createMesh(o: { iWidth: number; iHeight: number; width: number; height: number; image: string }) {
-    // Mesh
-    let geometry = new THREE.PlaneGeometry(1, 1, 80, 80);
-    let texture = new THREE.TextureLoader().load(o.image);
-    let material = new THREE.MeshBasicMaterial({
-      side: THREE.DoubleSide,
-      map: texture,
-      transparent: true,
-    });
+  createImages() {
+    let geometry = new THREE.PlaneGeometry(1, 1, 100, 100);
 
-    let mesh = new THREE.Mesh(geometry, material);
-    mesh.scale.set(o.width, o.height, o.width / 2);
-    this.scene.add(mesh);
-  }
+    this.imageData = this.images.map((image) => {
+      let boundaries = image.getBoundingClientRect();
 
-  composerPass() {
-    // Post-processing
-    this.composer = new EffectComposer(this.renderer);
-    this.renderPass = new RenderPass(this.scene, this.camera);
-    this.composer.addPass(this.renderPass);
+      let texture = new THREE.TextureLoader().load(image.src);
+      let material = new THREE.MeshBasicMaterial({
+        side: THREE.DoubleSide,
+        map: texture,
+        transparent: true,
+      });
+      const imageMesh = new THREE.Mesh(geometry, material);
 
-    // our custom shader pass for the whole screen, to displace previous render
-    this.customPass = new ShaderPass({
-      uniforms: {
-        tDiffuse: { value: null },
-        distort: { value: 0 },
-        resolution: { value: new THREE.Vector2(1, window.innerHeight / window.innerWidth) },
-        uMouse: { value: new THREE.Vector2(-10, -10) },
-        uVelo: { value: 0 },
-        uScale: { value: 0 },
-        uType: { value: 0 },
-        time: { value: 0 },
-      },
-      vertexShader: postVertexShader,
-      fragmentShader: postFragmentShader,
-    });
+      imageMesh.scale.set(boundaries.width, boundaries.height, 1);
 
-    // making sure we are rendering it.
-    this.customPass.renderToScreen = true;
-    this.composer.addPass(this.customPass);
-  }
+      this.scene.add(imageMesh);
 
-  addEventListeners() {
-    window.addEventListener("resize", this.resize.bind(this));
-    this.onMouseMove();
-  }
-
-  onMouseMove() {
-    window.addEventListener("mousemove", (e) => {
-      const position = [e.clientX, e.clientY];
-      this.mouse.x = position[0] / window.innerWidth;
-      this.mouse.y = 1 - position[1] / window.innerHeight;
+      return {
+        image: image,
+        mesh: imageMesh,
+        top: boundaries.top,
+        left: boundaries.left,
+        width: boundaries.width,
+        height: boundaries.height,
+      };
     });
   }
 
-  resize() {
-    this.width = window.innerWidth;
-    this.height = window.innerHeight;
+  // update position of images in the scene
+  updatePosition() {
+    this.imageData.forEach((image) => {
+      image.mesh.position.x = image.left - this.width / 2 + image.width / 2;
+      image.mesh.position.y = this.scroll - image.top + this.height / 2 - image.height / 2;
+    });
+  }
+
+  onResize() {
     this.renderer.setSize(this.width, this.height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
     this.camera.aspect = this.width / this.height;
-
-    this.camera.fov =
-      2 * Math.atan(this.width / this.camera.aspect / (2 * this.cameraDistance)) * (180 / Math.PI); // in degrees
-    this.customPass.uniforms.resolution.value.y = this.height / this.width;
-
     this.camera.updateProjectionMatrix();
-  }
 
-  getSpeed() {
-    this.speed = Math.sqrt(
-      (this.prevMouse.x - this.mouse.x) ** 2 + (this.prevMouse.y - this.mouse.y) ** 2
-    );
-
-    this.targetSpeed -= 0.01 * (this.targetSpeed - this.speed);
-    this.followMouse.x -= 0.1 * (this.followMouse.x - this.mouse.x);
-    this.followMouse.y -= 0.1 * (this.followMouse.y - this.mouse.y);
-
-    this.prevMouse.x = this.mouse.x;
-    this.prevMouse.y = this.mouse.y;
+    if (this.imageData) {
+      for (let i = 0; i < this.imageData.length; i++) {
+        this.imageData[i].top = this.images[i].getBoundingClientRect().top;
+        this.imageData[i].height = this.images[i].getBoundingClientRect().height;
+        this.imageData[i].left = this.images[i].getBoundingClientRect().left;
+        this.imageData[i].width = this.images[i].getBoundingClientRect().width;
+        this.imageData[i].mesh.scale.set(
+          this.images[i].getBoundingClientRect().width,
+          this.images[i].getBoundingClientRect().height,
+          1
+        );
+      }
+    }
   }
 
   render() {
     requestAnimationFrame(this.render.bind(this));
 
-    this.time += 0.05;
-    this.getSpeed();
-
-    console.log(this.targetSpeed);
-
-    this.customPass.uniforms.time.value = this.time;
-    this.customPass.uniforms.uMouse.value = this.followMouse;
-    this.customPass.uniforms.uVelo.value = this.targetSpeed;
-    this.customPass.uniforms.uVelo.value = Math.min(this.targetSpeed, 0.05);
-    this.targetSpeed *= 0.999;
-
-    if (this.composer) this.composer.render();
+    this.updatePosition();
+    // this.renderer.render(this.scene, this.camera);
+    if (this.postProcessing) {
+      console.log("rendering");
+      this.postProcessing.render();
+    }
   }
 }
