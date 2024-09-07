@@ -65,41 +65,11 @@ export default class Scene {
     // Mesh
     let geometry = new THREE.PlaneGeometry(1, 1, 80, 80);
     let texture = new THREE.TextureLoader().load(o.image);
-    let material = new THREE.ShaderMaterial({
+    let material = new THREE.MeshBasicMaterial({
       side: THREE.DoubleSide,
-      uniforms: {
-        time: { value: 0 },
-        progress: { value: 0 },
-        angle: { value: 0 },
-        texture1: { value: texture },
-        texture2: { value: null },
-        resolution: { value: new THREE.Vector4() },
-        uvRate1: {
-          value: new THREE.Vector2(1, 1),
-        },
-      },
-      // wireframe: true,
+      map: texture,
       transparent: true,
-      vertexShader: vertexShader,
-      fragmentShader: fragmentShader,
     });
-
-    let imageAspect = o.iHeight / o.iWidth;
-    let a1;
-    let a2;
-    if (o.height / o.width > imageAspect) {
-      a1 = (o.width / o.height) * imageAspect;
-      a2 = 1;
-    } else {
-      a1 = 1;
-      a2 = o.height / o.width / imageAspect;
-    }
-    material.uniforms.resolution.value.x = o.width;
-    material.uniforms.resolution.value.y = o.height;
-    material.uniforms.resolution.value.z = a1;
-    material.uniforms.resolution.value.w = a2;
-    material.uniforms.progress.value = 0;
-    material.uniforms.angle.value = 0.3;
 
     let mesh = new THREE.Mesh(geometry, material);
     mesh.scale.set(o.width, o.height, o.width / 2);
@@ -113,7 +83,7 @@ export default class Scene {
     this.composer.addPass(this.renderPass);
 
     // our custom shader pass for the whole screen, to displace previous render
-    let customPass = new ShaderPass({
+    this.customPass = new ShaderPass({
       uniforms: {
         tDiffuse: { value: null },
         distort: { value: 0 },
@@ -129,8 +99,8 @@ export default class Scene {
     });
 
     // making sure we are rendering it.
-    customPass.renderToScreen = true;
-    this.composer.addPass(customPass);
+    this.customPass.renderToScreen = true;
+    this.composer.addPass(this.customPass);
   }
 
   addEventListeners() {
@@ -159,11 +129,33 @@ export default class Scene {
     this.camera.updateProjectionMatrix();
   }
 
+  getSpeed() {
+    this.speed = Math.sqrt(
+      (this.prevMouse.x - this.mouse.x) ** 2 + (this.prevMouse.y - this.mouse.y) ** 2
+    );
+
+    this.targetSpeed -= 0.01 * (this.targetSpeed - this.speed);
+    this.followMouse.x -= 0.1 * (this.followMouse.x - this.mouse.x);
+    this.followMouse.y -= 0.1 * (this.followMouse.y - this.mouse.y);
+
+    this.prevMouse.x = this.mouse.x;
+    this.prevMouse.y = this.mouse.y;
+  }
+
   render() {
     requestAnimationFrame(this.render.bind(this));
 
-    if (this.composer) {
-      this.composer.render();
-    }
+    this.time += 0.05;
+    this.getSpeed();
+
+    console.log(this.targetSpeed);
+
+    this.customPass.uniforms.time.value = this.time;
+    this.customPass.uniforms.uMouse.value = this.followMouse;
+    this.customPass.uniforms.uVelo.value = this.targetSpeed;
+    this.customPass.uniforms.uVelo.value = Math.min(this.targetSpeed, 0.05);
+    this.targetSpeed *= 0.999;
+
+    if (this.composer) this.composer.render();
   }
 }

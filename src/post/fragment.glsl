@@ -45,7 +45,7 @@ void main()	{
 	
 	// colorful
 	if(uType==0){
-		float c = circle(newUV, uMouse, 0.0, 0.2);
+		float c = circle(newUV, uMouse, 0.15, 0.2);
 		float r = texture2D(tDiffuse, newUV.xy += c * (uVelo * .5)).x;
 		float g = texture2D(tDiffuse, newUV.xy += c * (uVelo * .525)).y;
 		float b = texture2D(tDiffuse, newUV.xy += c * (uVelo * .55)).z;
