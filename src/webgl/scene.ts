@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import Lenis from "lenis";
 import PostProcessing from "./post";
 import Images from "./images";
 
@@ -13,9 +14,12 @@ export default class Scene {
   postProcessing: PostProcessing;
   width: number;
   height: number;
+  lenis: Lenis;
 
   constructor() {
     // init
+    window.scrollTo(0, 0);
+    this.lenis = new Lenis();
     this.width = window.innerWidth;
     this.height = window.innerHeight;
 
@@ -42,8 +46,7 @@ export default class Scene {
     this.images = new Images({
       scene: this.scene,
       images: images,
-      camera: this.camera,
-      renderer: this.renderer,
+      lenis: this.lenis,
     });
 
     // Post Processing
@@ -55,7 +58,20 @@ export default class Scene {
     });
 
     // methods
+    this.resize();
     this.render();
+
+    // events
+    window.addEventListener("resize", this.resize.bind(this));
+  }
+
+  resize() {
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+    this.camera.aspect = this.width / this.height;
+    this.camera.fov = 2 * Math.atan(this.height / 2 / cameraDistance) * (180 / Math.PI);
+    this.renderer.setSize(this.width, this.height);
+    this.camera.updateProjectionMatrix();
   }
 
   render() {

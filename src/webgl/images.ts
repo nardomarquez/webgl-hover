@@ -1,13 +1,10 @@
 import Lenis from "lenis";
 import * as THREE from "three";
 
-let cameraDistance = 10;
-
 interface ImageProps {
   scene: THREE.Scene;
   images: HTMLImageElement[];
-  camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
+  lenis: Lenis;
 }
 
 export default class Images {
@@ -25,25 +22,20 @@ export default class Images {
   width: number;
   height: number;
   camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
   lenis: Lenis;
 
-  constructor({ scene, images, camera, renderer }: ImageProps) {
-    window.scrollTo(0, 0);
-    this.lenis = new Lenis();
+  constructor({ scene, images, lenis }: ImageProps) {
+    this.lenis = lenis;
     this.scroll = this.lenis.scroll;
     this.width = window.innerWidth;
     this.height = window.innerHeight;
     this.scene = scene;
     this.images = images;
-    this.camera = camera;
-    this.renderer = renderer;
 
     this.createImages();
-    this.onResize();
 
     // events
-    window.addEventListener("resize", this.onResize.bind(this));
+    window.addEventListener("resize", this.resize.bind(this));
     window.addEventListener("scroll", () => {
       this.scroll = this.lenis.scroll;
     });
@@ -95,13 +87,9 @@ export default class Images {
     });
   }
 
-  onResize() {
+  resize() {
     this.width = window.innerWidth;
     this.height = window.innerHeight;
-    this.camera.aspect = this.width / this.height;
-    this.camera.fov = 2 * Math.atan(this.height / 2 / cameraDistance) * (180 / Math.PI);
-    this.renderer.setSize(this.width, this.height);
-    this.camera.updateProjectionMatrix();
   }
 
   render(e: number) {
