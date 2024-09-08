@@ -13,11 +13,10 @@
 .js-image {
   width: 50vw;
   height: auto;
+  opacity: 0;
 }
 
 #app {
-  opacity: 0.3;
-  pointer-events: none;
 }
 
 canvas {

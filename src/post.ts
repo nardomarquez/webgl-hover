@@ -59,13 +59,11 @@ export default class PostProcessing {
     this.prevMouse = new THREE.Vector2();
 
     // Events
-    // this.resize();
     this.onMouseMove();
   }
 
   onMouseMove() {
     window.addEventListener("mousemove", (e) => {
-      console.log(e);
       const position = [e.clientX, e.clientY];
       this.mouse.x = position[0] / window.innerWidth;
       this.mouse.y = 1 - position[1] / window.innerHeight;

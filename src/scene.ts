@@ -1,10 +1,11 @@
 import * as THREE from "three";
+import Lenis from "lenis";
 import PostProcessing from "./post";
 
 let cameraDistance = 10;
 
 export default class Scene {
-  canvas: HTMLCanvasElement;
+  container: HTMLElement;
   images: HTMLImageElement[] = [];
   imageData: {
     image: HTMLImageElement;
@@ -19,13 +20,17 @@ export default class Scene {
   renderer: THREE.WebGLRenderer;
   postProcessing: PostProcessing;
 
+  lenis: Lenis;
   scroll: number;
   width: number;
   height: number;
 
   constructor() {
     // init
-    this.scroll = 0;
+    this.lenis = new Lenis({
+      lerp: 0.15,
+    });
+    this.scroll = this.lenis.scroll;
     this.width = window.innerWidth;
     this.height = window.innerHeight;
 
@@ -33,14 +38,14 @@ export default class Scene {
     this.scene = new THREE.Scene();
 
     // Renderer
-    this.canvas = document.querySelector("canvas.webgl") as HTMLCanvasElement;
+    this.container = document.querySelector(".webgl") as HTMLElement;
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
-      canvas: this.canvas,
     });
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.container.appendChild(this.renderer.domElement);
 
     // Camera
     this.camera = new THREE.PerspectiveCamera(70, this.width / this.height, 0.1, 100);
@@ -64,6 +69,9 @@ export default class Scene {
     this.render();
 
     window.addEventListener("resize", this.onResize.bind(this));
+    window.addEventListener("scroll", () => {
+      this.scroll = this.lenis.scroll;
+    });
   }
 
   createImages() {
@@ -104,11 +112,14 @@ export default class Scene {
   }
 
   onResize() {
-    this.renderer.setSize(this.width, this.height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
     this.camera.aspect = this.width / this.height;
     this.camera.updateProjectionMatrix();
+
+    console.log(this.width, this.height);
+    this.renderer.setSize(this.width, this.height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     if (this.imageData) {
       for (let i = 0; i < this.imageData.length; i++) {
@@ -126,12 +137,14 @@ export default class Scene {
   }
 
   render() {
-    requestAnimationFrame(this.render.bind(this));
+    requestAnimationFrame((e) => {
+      this.lenis.raf(e);
+      this.render();
+    });
 
     this.updatePosition();
     // this.renderer.render(this.scene, this.camera);
     if (this.postProcessing) {
-      console.log("rendering");
       this.postProcessing.render();
     }
   }
