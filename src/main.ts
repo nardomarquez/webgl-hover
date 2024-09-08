@@ -1,5 +1,5 @@
 import "./style.css";
-import Scene from "./scene";
+import Scene from "./webgl/scene";
 
 window.addEventListener("load", () => {
   const scene = new Scene();

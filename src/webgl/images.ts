@@ -1,12 +1,18 @@
-import * as THREE from "three";
 import Lenis from "lenis";
-import PostProcessing from "./post";
+import * as THREE from "three";
 
 let cameraDistance = 10;
 
-export default class Scene {
-  container: HTMLElement;
-  images: HTMLImageElement[] = [];
+interface ImageProps {
+  scene: THREE.Scene;
+  images: HTMLImageElement[];
+  camera: THREE.PerspectiveCamera;
+  renderer: THREE.WebGLRenderer;
+}
+
+export default class Images {
+  scene: THREE.Scene;
+  images: HTMLImageElement[];
   imageData: {
     image: HTMLImageElement;
     mesh: THREE.Mesh;
@@ -15,63 +21,31 @@ export default class Scene {
     width: number;
     height: number;
   }[] = [];
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  renderer: THREE.WebGLRenderer;
-  postProcessing: PostProcessing;
-
-  lenis: Lenis;
   scroll: number;
   width: number;
   height: number;
+  camera: THREE.PerspectiveCamera;
+  renderer: THREE.WebGLRenderer;
+  lenis: Lenis;
 
-  constructor() {
-    // init
-    window.scrollTo(0, 0);
-    this.lenis = new Lenis({
-      lerp: 0.15,
-    });
+  constructor({ scene, images, camera, renderer }: ImageProps) {
+    this.lenis = new Lenis();
     this.scroll = this.lenis.scroll;
     this.width = window.innerWidth;
     this.height = window.innerHeight;
+    this.scene = scene;
+    this.images = images;
+    this.camera = camera;
+    this.renderer = renderer;
 
-    // Scene
-    this.scene = new THREE.Scene();
-
-    // Renderer
-    this.container = document.querySelector(".webgl") as HTMLElement;
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-    });
-    this.renderer.setSize(this.width, this.height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.container.appendChild(this.renderer.domElement);
-
-    // Camera
-    this.camera = new THREE.PerspectiveCamera(70, this.width / this.height, 0.1, 100);
-    this.camera.fov = 2 * Math.atan(this.height / 2 / cameraDistance) * (180 / Math.PI);
-    this.camera.position.set(0, 0, cameraDistance);
-
-    // create images
-    this.images = [...document.querySelectorAll("img")];
     this.createImages();
-
-    // Post Processing
-    this.postProcessing = new PostProcessing({
-      renderer: this.renderer,
-      scene: this.scene,
-      camera: this.camera,
-      sizes: { width: this.width, height: this.height },
-    });
-
-    // methods
     this.onResize();
-    this.render();
 
+    // events
     window.addEventListener("resize", this.onResize.bind(this));
     window.addEventListener("scroll", () => {
       this.scroll = this.lenis.scroll;
+      console.log(this.lenis.scroll);
     });
   }
 
@@ -104,7 +78,6 @@ export default class Scene {
     });
   }
 
-  // update position of images in the scene
   updatePosition() {
     this.imageData.forEach((image) => {
       image.mesh.position.x = image.left - this.width / 2 + image.width / 2;
@@ -136,16 +109,8 @@ export default class Scene {
     }
   }
 
-  render() {
-    requestAnimationFrame((e) => {
-      this.lenis.raf(e);
-      this.updatePosition();
-
-      if (this.postProcessing) {
-        this.postProcessing.render();
-      }
-
-      this.render();
-    });
+  render(e: number) {
+    this.lenis.raf(e);
+    this.updatePosition();
   }
 }
