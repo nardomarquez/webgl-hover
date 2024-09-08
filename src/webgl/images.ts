@@ -29,6 +29,7 @@ export default class Images {
   lenis: Lenis;
 
   constructor({ scene, images, camera, renderer }: ImageProps) {
+    window.scrollTo(0, 0);
     this.lenis = new Lenis();
     this.scroll = this.lenis.scroll;
     this.width = window.innerWidth;
@@ -45,7 +46,6 @@ export default class Images {
     window.addEventListener("resize", this.onResize.bind(this));
     window.addEventListener("scroll", () => {
       this.scroll = this.lenis.scroll;
-      console.log(this.lenis.scroll);
     });
   }
 
@@ -85,32 +85,28 @@ export default class Images {
     });
   }
 
+  updateImageData() {
+    this.imageData.forEach((image, i) => {
+      image.top = this.images[i].getBoundingClientRect().top + this.scroll;
+      image.height = this.images[i].getBoundingClientRect().height;
+      image.left = this.images[i].getBoundingClientRect().left;
+      image.width = this.images[i].getBoundingClientRect().width;
+      image.mesh.scale.set(image.width, image.height, 1);
+    });
+  }
+
   onResize() {
     this.width = window.innerWidth;
     this.height = window.innerHeight;
     this.camera.aspect = this.width / this.height;
     this.camera.fov = 2 * Math.atan(this.height / 2 / cameraDistance) * (180 / Math.PI);
-    this.camera.updateProjectionMatrix();
-
     this.renderer.setSize(this.width, this.height);
-
-    if (this.imageData) {
-      for (let i = 0; i < this.imageData.length; i++) {
-        this.imageData[i].top = this.images[i].getBoundingClientRect().top;
-        this.imageData[i].height = this.images[i].getBoundingClientRect().height;
-        this.imageData[i].left = this.images[i].getBoundingClientRect().left;
-        this.imageData[i].width = this.images[i].getBoundingClientRect().width;
-        this.imageData[i].mesh.scale.set(
-          this.images[i].getBoundingClientRect().width,
-          this.images[i].getBoundingClientRect().height,
-          1
-        );
-      }
-    }
+    this.camera.updateProjectionMatrix();
   }
 
   render(e: number) {
-    this.lenis.raf(e);
     this.updatePosition();
+    this.updateImageData();
+    this.lenis.raf(e);
   }
 }
