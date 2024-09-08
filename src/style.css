@@ -58,9 +58,9 @@ p {
 }
 
 canvas {
-  display: block;
   position: fixed;
-  z-index: -1;
-  left: 0;
   top: 0;
+  left: 0;
+  z-index: -1;
+  pointer-events: none;
 }

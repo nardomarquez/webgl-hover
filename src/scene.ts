@@ -116,11 +116,10 @@ export default class Scene {
     this.width = window.innerWidth;
     this.height = window.innerHeight;
     this.camera.aspect = this.width / this.height;
+    this.camera.fov = 2 * Math.atan(this.height / 2 / cameraDistance) * (180 / Math.PI);
     this.camera.updateProjectionMatrix();
 
-    console.log(this.width, this.height);
     this.renderer.setSize(this.width, this.height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     if (this.imageData) {
       for (let i = 0; i < this.imageData.length; i++) {
@@ -140,13 +139,13 @@ export default class Scene {
   render() {
     requestAnimationFrame((e) => {
       this.lenis.raf(e);
+      this.updatePosition();
+
+      if (this.postProcessing) {
+        this.postProcessing.render();
+      }
+
       this.render();
     });
-
-    this.updatePosition();
-    // this.renderer.render(this.scene, this.camera);
-    if (this.postProcessing) {
-      this.postProcessing.render();
-    }
   }
 }
