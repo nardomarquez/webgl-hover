@@ -27,6 +27,7 @@ export default class Scene {
 
   constructor() {
     // init
+    window.scrollTo(0, 0);
     this.lenis = new Lenis({
       lerp: 0.15,
     });
